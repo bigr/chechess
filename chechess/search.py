@@ -76,3 +76,16 @@ class TranspositionTableAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
                 return tt_entry["score"], tt_entry["score"], tt_entry["score"]
 
         return alpha, beta, None
+
+
+class GameOverAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
+    def eval(self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float) -> Tuple[float, float, Optional[float]]:
+        outcome = board.outcome()
+        if outcome is not None:
+            if outcome.winner == board.turn:
+                return np.inf, np.inf, np.inf
+            elif outcome.winner is None:
+                return 0.0, 0.0, 0.0
+            else:
+                return -np.inf, -np.inf, -np.inf
+        return alpha, beta, None
