@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Sequence
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
-
 from chess import Board
 
 from chechess.eval import Evaluator
@@ -18,8 +17,12 @@ class AlphaBetaSearchNodePhase(ABC):
 
 
 class AlphaBetaSearcher(Evaluator):
-    def __init__(self, depth: int, search_node_phases: Sequence[AlphaBetaSearchNodePhase],
-                 transposition_table: TranspositionTable):
+    def __init__(
+        self,
+        depth: int,
+        search_node_phases: Sequence[AlphaBetaSearchNodePhase],
+        transposition_table: TranspositionTable,
+    ):
         self.depth = depth
         self.search_node_phases = search_node_phases
         self.transposition_table = transposition_table
@@ -27,22 +30,23 @@ class AlphaBetaSearcher(Evaluator):
     def eval(self, board: Board) -> float:
         return self.search(board, self.depth, -np.inf, np.inf)
 
-    def _store_to_transposition_table(self, board: Board, depth: int, value: float, alpha: float,
-                                      beta: float):
+    def _store_to_transposition_table(
+        self, board: Board, depth: int, value: float, alpha: float, beta: float
+    ) -> None:
         tt_entry = self.transposition_table[board]
-        if depth >= tt_entry['depth']:
-            tt_entry['depth'] = depth
-            tt_entry['score'] = value
+        if depth >= tt_entry["depth"]:
+            tt_entry["depth"] = depth
+            tt_entry["score"] = value
             if value < alpha:
-                tt_entry['node_type'] = 'all'
+                tt_entry["node_type"] = "all"
             elif value >= beta:
-                tt_entry['node_type'] = 'cut'
+                tt_entry["node_type"] = "cut"
             else:
-                tt_entry['node_type'] = 'pv'
+                tt_entry["node_type"] = "pv"
 
     def search(self, board: Board, depth: int, alpha: float, beta: float) -> float:
         original_alpha, original_beta = alpha, beta
-        value = None
+        value = -np.inf
         for search_stage in self.search_node_phases:
             alpha, beta, value = search_stage.eval(self, board, depth, alpha, beta)
             if alpha == beta:
@@ -50,3 +54,25 @@ class AlphaBetaSearcher(Evaluator):
         self._store_to_transposition_table(board, depth, value, original_alpha, original_beta)
 
         return value
+
+
+class TranspositionTableAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
+    def __init__(self, transposition_table: TranspositionTable):
+        self.transposition_table = transposition_table
+
+    def eval(
+        self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float
+    ) -> Tuple[float, float, Optional[float]]:
+        tt_entry = self.transposition_table[board]
+        if tt_entry.get("depth", -1) >= depth:
+            if tt_entry["node_type"] == "pv":
+                alpha, beta = tt_entry["score"], tt_entry["score"]
+            elif tt_entry["node_type"] == "all":
+                beta = min(beta, tt_entry["score"])
+            elif tt_entry["node_type"] == "cut":
+                alpha = max(alpha, tt_entry["score"])
+
+            if alpha >= beta:
+                return tt_entry["score"], tt_entry["score"], tt_entry["score"]
+
+        return alpha, beta, None
