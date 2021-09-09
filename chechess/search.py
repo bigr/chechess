@@ -5,6 +5,7 @@ import numpy as np
 from chess import Board
 
 from chechess.eval import Evaluator
+from chechess.move_generator import MoveGenerator
 from chechess.table import TranspositionTable
 
 
@@ -105,3 +106,24 @@ class SimpleHorizonAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
             return value, value, value
         else:
             return alpha, beta, None
+
+
+class CoreAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
+    def __init__(self, move_generator: MoveGenerator):
+        self.move_generator = move_generator
+
+    def eval(
+        self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float
+    ) -> Tuple[float, float, Optional[float]]:
+        value = -np.inf
+        for move in self.move_generator.generate(board):
+            try:
+                board.push(move)
+                value = max(value, -searcher.search(board, depth - 1, -beta, -alpha))
+                alpha = max(alpha, value)
+                if alpha >= beta:
+                    break
+            finally:
+                board.pop()
+
+        return alpha, beta, value
