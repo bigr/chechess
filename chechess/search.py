@@ -79,7 +79,9 @@ class TranspositionTableAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
 
 
 class GameOverAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
-    def eval(self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float) -> Tuple[float, float, Optional[float]]:
+    def eval(
+        self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float
+    ) -> Tuple[float, float, Optional[float]]:
         outcome = board.outcome()
         if outcome is not None:
             if outcome.winner == board.turn:
@@ -89,3 +91,17 @@ class GameOverAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
             else:
                 return -np.inf, -np.inf, -np.inf
         return alpha, beta, None
+
+
+class SimpleHorizonAlphaBetaSearchNodePhase(AlphaBetaSearchNodePhase):
+    def __init__(self, horizon_evaluator: Evaluator):
+        self.horizon_evaluator = horizon_evaluator
+
+    def eval(
+        self, searcher: AlphaBetaSearcher, board: Board, depth: int, alpha: float, beta: float
+    ) -> Tuple[float, float, Optional[float]]:
+        if not depth:
+            value = self.horizon_evaluator.eval(board)
+            return value, value, value
+        else:
+            return alpha, beta, None
